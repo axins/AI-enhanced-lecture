@@ -20,7 +20,7 @@ import os
 import re
 import sys
 
-VERSION = "3.0"
+VERSION = "3.1"
 LINK_TYPES = ["数据库DOI", "开放获取", "官方一手", "媒体报道", "判例数据"]
 TIERS = ["T1", "T2", "T3", "T4"]
 BLOCKS = ["【历史脉络】", "【逻辑关联】", "【参考链接】"]

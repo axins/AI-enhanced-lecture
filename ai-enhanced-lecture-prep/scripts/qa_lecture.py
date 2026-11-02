@@ -24,7 +24,7 @@ import sys
 
 import _deck
 
-VERSION = "3.0"
+VERSION = "3.1"
 DEFAULT_DIMENSIONS = ["理论", "人物", "案例", "文献", "实践", "互动"]
 DEFAULT_MARKERS = ["需核实", "待核实", "待查", "存疑", "未核实"]
 LINK_TYPES = ["数据库DOI", "开放获取", "官方一手", "媒体报道", "判例数据"]

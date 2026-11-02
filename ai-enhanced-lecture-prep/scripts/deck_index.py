@@ -23,7 +23,7 @@ import time
 
 import _deck
 
-VERSION = "3.0"
+VERSION = "3.1"
 DEFAULT = "（本页无文字）"
 
 

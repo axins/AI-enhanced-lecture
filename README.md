@@ -2,7 +2,7 @@
 
 如何用 AI agent 高效备课：扩充课程材料、重做 ppt、核查事实、建设参考资料库，并设计 AI 增强的课堂与作业。
 
-本仓库提供一个可直接使用的 CodeBuddy / Claude Skill：**`ai-enhanced-lecture-prep`**（当前版本 **3.0**）。
+本仓库提供一个可直接使用的 CodeBuddy / Claude Skill：**`ai-enhanced-lecture-prep`**（当前版本 **3.1**）。
 
 它沉淀了一套把一门大学社科课程从「几十页课件」扩展为「可讲授、可核查、可复用」的完整讲义的工作流，重点解决的是 **AI 在备课中到底该怎么用** 这个问题。
 
@@ -29,20 +29,21 @@
 
 ## v3 新增
 
+> v3.1 撤回了 v3 中试行的「案例前置」阶段，工作流回到八阶段 P0—P7；其余变更保持不变。
+
 | 变更 | 内容 |
 |---|---|
 | **来源分级** | 每条依据标 T1—T4（文书/官方原文 → 权威署名报道 → 整理稿/百科 → 不可考）；新增 `references/source-tiers.md` |
 | **冲突并列** | 同一事实出现两个数值时并列两说并各标等级，不自行取舍；新增失败模式「数值冲突只留一说」 |
 | **引语纪律** | 只有整理稿、没有逐字实录时写「据……转述」，不得加引号当原话 |
 | **待核清单** | 每份交付物末尾固定附「待核清单」，写明未取到的原始文本与结论 |
-| **P2.5 案例前置** | 把案例从讲稿末尾搬到开课讨论；`scaffold_lecture.py --frontload` 生成开课案例页骨架 |
 | **格式兜底** | `.ppt`/`.doc` 明确报错并提示另存，不再返回 0 页让后续步骤跑在空基线上 |
 | **新脚本** | `source_audit.py`：检查链接是否漏标类型/等级、等级与域名是否矛盾、是否缺待核清单 |
 | **性能** | 解析缓存、链接并发、单遍扫描、二分定位（见下表实测） |
 
 ### 实测性能（同一台机器，同一批材料）
 
-| 场景 | 2.x | 3.0 |
+| 场景 | 2.x | v3 |
 |---|---|---|
 | 347 页课件解析 | 每次调用各解析一遍（1.34s） | 首次 1.34s，之后 **0.01s**（缓存命中） |
 | 109 条链接存活性校验 | 逐条串行 **231.0s** | 8 线程 **38.3s**；再跑一次 **0.0s**（结果缓存） |
@@ -71,16 +72,16 @@
 ai-enhanced-lecture-prep/
 ├── SKILL.md                          # 入口：原则、体例、工作流总览、脚本用法
 ├── references/
-│   ├── workflow-phases.md            # 八阶段 + P2.5 案例前置：动作、交付物、验收
+│   ├── workflow-phases.md            # 八阶段：动作、交付物、验收
 │   ├── source-tiers.md               # 来源分级、冲突并列、待核清单口径（v3 新增）
 │   ├── ai-for-prep.md                # 教师侧：AI 增强备课的四个杠杆（重点）
 │   ├── ai-pedagogy.md                # 课堂侧：教学活动、作业规范与评分标准
-│   ├── qa-rubric.md                  # 质检清单、验收门槛、13 种失败模式
+│   ├── qa-rubric.md                  # 质检清单、验收门槛、失败模式
 │   └── prompt-library.md             # 备课与核查用提示词库
 ├── scripts/
 │   ├── _deck.py                      # 共享解析层：缓存、格式兜底、表格与组合形状
 │   ├── deck_index.py                 # 导出课件页序索引与指定页全文
-│   ├── scaffold_lecture.py           # 按页序生成讲稿骨架（--frontload）
+│   ├── scaffold_lecture.py           # 按页序生成讲稿骨架
 │   ├── qa_lecture.py                 # 覆盖度/重复/顺序/维度/来源等级/待核清单校验
 │   ├── source_audit.py               # 来源分级审计（v3 新增）
 │   ├── extract_todo.py               # 抽取待核实条目，生成表格式核查清单
@@ -101,7 +102,6 @@ ai-enhanced-lecture-prep/
 | P0 | 盘点与基线 | `page_index.md`（页序 + 页数指纹） |
 | P1 | 骨架生成 | 讲稿骨架（每页四块） |
 | P2 | 逐页扩展 | 按六类维度填充 + 三子块 |
-| **P2.5** | **案例前置** | **开课案例页 + 各理论页的回答案例条目** |
 | P3 | 质检 | 覆盖度/重复/顺序/维度/来源等级校验报告 |
 | P4 | 事实核查 | 核查清单（清零）+ 来源等级 + 冲突并列 |
 | P5 | 资料总库 | 五分类参考资料库 |
@@ -118,8 +118,8 @@ ai-enhanced-lecture-prep/
 # 1. 盘点课件（首次解析后进缓存）
 python scripts/deck_index.py 课件.pptx --out page_index.md --json page_index.json
 
-# 2. 生成讲稿骨架（含开课案例页）
-python scripts/scaffold_lecture.py 课件.pptx --out 讲稿.md --frontload
+# 2. 生成讲稿骨架
+python scripts/scaffold_lecture.py 课件.pptx --out 讲稿.md
 
 # 3. （逐页扩展后）质检
 python scripts/qa_lecture.py 讲稿.md --deck 课件.pptx --partial --strict

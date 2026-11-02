@@ -22,7 +22,7 @@ import os
 import re
 import sys
 
-VERSION = "3.0"
+VERSION = "3.1"
 DEFAULT_MARKERS = ["需核实", "待核实", "待查", "存疑", "未核实", "出处待核实"]
 PAGE_RE = re.compile(r"^## 第 (\d+) 页", re.M)
 

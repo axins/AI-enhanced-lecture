@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 """按课件页序生成讲稿骨架(.md)：文件头体例 + 每页四块 + 文件尾附录。
 
-v3 变更：
+v3.1 变更：
 - 接入共享解析层（缓存复用，避免重复解析）
-- 新增 --frontload：在正文前插入「开课案例页」骨架，供案例前置改造使用
+- 撤回 3.0 的 --frontload（案例前置页），工作流回到八阶段
 - 文件尾固定追加「待核清单」，与交付规范一致
 - --pages 支持区间；.ppt 明确报错
 
@@ -12,7 +12,6 @@ v3 变更：
     python scaffold_lecture.py <deck.pptx> --out 讲稿.md
     python scaffold_lecture.py <deck.pptx> --out 讲稿.md --pages 1-20
     python scaffold_lecture.py <deck.pptx> --out 讲稿.md --dimensions 理论,人物,案例,文献,实践,互动
-    python scaffold_lecture.py <deck.pptx> --out 讲稿.md --frontload
     python scaffold_lecture.py <deck.pptx> --out 讲稿.md --no-content
 """
 import argparse
@@ -21,7 +20,7 @@ import sys
 
 import _deck
 
-VERSION = "3.0"
+VERSION = "3.1"
 DEFAULT_DIMENSIONS = ["理论", "人物", "案例", "文献", "实践", "互动"]
 DIMENSION_DESC = {
     "理论": "概念澄清、理论来源、与其他理论的对照",
@@ -58,7 +57,6 @@ def main():
     ap.add_argument("--dimensions", default="", help="标注维度，逗号分隔（默认 %s）"
                     % ",".join(DEFAULT_DIMENSIONS))
     ap.add_argument("--title", default="", help="讲次标题，用于文件头")
-    ap.add_argument("--frontload", action="store_true", help="插入开课案例页骨架（案例前置）")
     ap.add_argument("--no-content", action="store_true", help="不填充【页面内容】")
     ap.add_argument("--no-cache", action="store_true", help="不读写解析缓存")
     ap.add_argument("--version", action="version", version="scaffold_lecture.py " + VERSION)
@@ -92,16 +90,6 @@ def main():
     buf.append("- 无法确认的人名拼写、卷期、条号、数据，一律写标记词 `需核实`，不得猜测。\n")
     buf.append("\n---\n")
 
-    if a.frontload:
-        buf.append("\n## 开课案例页　（前置讨论，非课件原有页）\n")
-        buf.append("\n【案例选择】写清案例名称、时间、信息来源等级；只给事实，不下结论。\n")
-        buf.append("\n【问题接口】\n")
-        buf.append("- 抛给学生的 3 个问题（先独立作答，再对照答案）\n")
-        buf.append("- 每个问题对应本讲哪个理论（写明「第 N 页」）\n")
-        buf.append("\n【回答案例】\n")
-        buf.append("- 本讲每个理论讲完后回到此处：用该理论重述一遍案例，写明改变了哪个判断\n")
-        buf.append("\n【待核】\n- 需核实\n")
-
     for i in pages:
         s = slides[i - 1]
         txt = s["text"].strip()
@@ -130,8 +118,7 @@ def main():
     buf.append("| 第 ? 页 | 需核实 |  |  |  |\n")
 
     io.open(a.out, "w", encoding="utf-8").write("".join(buf))
-    print("已生成 %s（%d 页，维度 %d 类%s）"
-          % (a.out, len(pages), len(dims), "，含开课案例页" if a.frontload else ""))
+    print("已生成 %s（%d 页，维度 %d 类）" % (a.out, len(pages), len(dims)))
     return 0
 
 

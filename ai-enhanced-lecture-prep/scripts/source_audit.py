@@ -25,7 +25,7 @@ import urllib.parse
 
 import _deck
 
-VERSION = "3.0"
+VERSION = "3.1"
 LINK_TYPES = ["数据库DOI", "开放获取", "官方一手", "媒体报道", "判例数据"]
 TIERS = ["T1", "T2", "T3", "T4"]
 

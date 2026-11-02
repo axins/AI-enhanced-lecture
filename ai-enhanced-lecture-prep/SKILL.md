@@ -1,11 +1,11 @@
 ---
 name: ai-enhanced-lecture-prep
-description: 用 AI 系统性地完成一门社科课程的备课——从课件盘点、逐页讲稿扩展、来源分级核查、参考资料库建设，到案例前置改造、交叉讲次一致性检查与 AI 增强课堂活动设计。This skill should be used when the user asks to prepare, expand, revise, or restructure lecture materials (pptx/pdf) for a university course; to build a lecture-notes document with per-page structure; to verify facts, names, citations, legal/statistical data or conflicting figures across a whole course and label source reliability tiers (T1—T4); to move cases from the end of a lecture to an opening discussion (case frontloading); to detect duplicated content or inconsistent requirements across lectures; or to design AI-enhanced classroom discussions and assessment rubrics. Discipline-agnostic — applicable to any social science or humanities course.
+description: 用 AI 系统性地完成一门社科课程的备课——从课件盘点、逐页讲稿扩展、来源分级核查、参考资料库建设，到交叉讲次一致性检查与 AI 增强课堂活动设计。This skill should be used when the user asks to prepare, expand, revise, or restructure lecture materials (pptx/pdf) for a university course; to build a lecture-notes document with per-page structure; to verify facts, names, citations, legal/statistical data or conflicting figures across a whole course and label source reliability tiers (T1—T4); to detect duplicated content or inconsistent requirements across lectures; or to design AI-enhanced classroom discussions and assessment rubrics. Discipline-agnostic — applicable to any social science or humanities course.
 ---
 
 # AI 增强社科课程备课
 
-**版本 3.0**。相对 2.x 的主要变化：新增来源分级（T1—T4）与冲突并列标注；新增 P2.5 案例前置改造阶段；交付物固定附「待核清单」；六个脚本全部重写为缓存复用、并发探测与单遍扫描，并新增 `source_audit.py`。
+**版本 3.1**。相对 2.x 的主要变化：新增来源分级（T1—T4）与冲突并列标注；交付物固定附「待核清单」；脚本全部重写为缓存复用、并发探测与单遍扫描，并新增 `source_audit.py`。3.1 撤回 3.0 中试行的「案例前置」阶段，工作流回到八阶段 P0—P7。
 
 ## 何时使用
 
@@ -14,7 +14,6 @@ description: 用 AI 系统性地完成一门社科课程的备课——从课件
 - 需要把一套课件（`.pptx`/`.pdf`）扩展为可讲授的讲稿与教案
 - 需要为课程材料补入历史脉络、理论关联与外部参考链接，并标明每条来源的可信等级
 - 需要核查课件中的人名、文献卷期、法条条号、统计数据、案例事实，以及**不同来源之间的数字冲突**
-- 需要把案例从讲稿末尾移到开课讨论，用案例做理论的落点
 - 需要检查同一门课程内各讲之间是否存在内容重复或要求冲突
 - 需要设计 AI 增强的课堂讨论、作业规范与评分标准
 - 需要按学期推进、分批交付、每批完成后即可上课使用
@@ -38,7 +37,7 @@ description: 用 AI 系统性地完成一门社科课程的备课——从课件
 ai-enhanced-lecture-prep/
 ├── SKILL.md
 ├── references/
-│   ├── workflow-phases.md      # 八阶段 + P2.5 案例前置：动作、交付物、验收门槛
+│   ├── workflow-phases.md      # 八阶段：动作、交付物、验收门槛
 │   ├── source-tiers.md         # 来源分级（T1—T4）、冲突并列标注、待核清单口径（新增）
 │   ├── ai-for-prep.md          # 教师侧：AI 增强备课的四个杠杆（重点）
 │   ├── ai-pedagogy.md          # 课堂侧：AI 增强教学活动与作业规范
@@ -47,7 +46,7 @@ ai-enhanced-lecture-prep/
 ├── scripts/
 │   ├── _deck.py                # 共享解析层：缓存、格式兜底、抽取表格与组合形状
 │   ├── deck_index.py           # 导出课件页序索引与指定页全文
-│   ├── scaffold_lecture.py     # 按页序生成讲稿骨架（--frontload 生成开课案例页）
+│   ├── scaffold_lecture.py     # 按页序生成讲稿骨架
 │   ├── qa_lecture.py           # 覆盖度/重复/顺序/维度/来源等级/待核清单校验
 │   ├── source_audit.py         # 来源分级审计（新增）
 │   ├── extract_todo.py         # 抽取待核实条目，生成表格式核查清单
@@ -66,7 +65,6 @@ ai-enhanced-lecture-prep/
 | P0 | 盘点与基线 | 导出页序、记录页数指纹、建立基线图 | `page_index.md` |
 | P1 | 骨架生成 | 按页序生成讲稿骨架 | `<课程>-第N讲-讲稿与教案.md` |
 | P2 | 逐页扩展 | 按维度补内容，核心条目补三子块 | 同上（填充后） |
-| **P2.5** | **案例前置** | **把案例移到开课讨论，每理论讲完回答案例** | **开课案例页 + 回答案例条目** |
 | P3 | 质检 | 覆盖度、重复、顺序、维度、来源等级 | 校验报告 |
 | P4 | 事实核查 | 逐条检索核实、标等级、并列冲突、回写 | 核查清单（清零） |
 | P5 | 资料总库 | 按五类集中存放链接，随讲累积 | `<课程>参考资料总库.md` |
@@ -164,8 +162,8 @@ python scripts/deck_index.py <deck.pptx> --out page_index.md --json page_index.j
 # P0 盘点：查看指定页全文与备注（支持区间）
 python scripts/deck_index.py <deck.pptx> --pages 3-9
 
-# P1 骨架：按页序生成讲稿骨架；--frontload 生成开课案例页
-python scripts/scaffold_lecture.py <deck.pptx> --out 讲稿.md --frontload
+# P1 骨架：按页序生成讲稿骨架
+python scripts/scaffold_lecture.py <deck.pptx> --out 讲稿.md
 
 # P3 质检：分批推进时加 --partial，严格模式加 --strict
 python scripts/qa_lecture.py 讲稿.md --deck <deck.pptx> --partial --strict --json qa.json
