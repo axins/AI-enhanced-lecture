@@ -1,17 +1,20 @@
 ---
 name: ai-enhanced-lecture-prep
-description: 用 AI 系统性地完成一门社科课程的备课——从课件盘点、逐页讲稿扩展、事实核查、参考资料库建设，到交叉讲次一致性检查与 AI 增强课堂活动设计。This skill should be used when the user asks to prepare, expand, revise, or restructure lecture materials (pptx/pdf) for a university course; to build a lecture-notes document with per-page structure; to verify facts, names, citations, or legal/statistical data across a whole course and add reference links; to detect duplicated content or inconsistent requirements across lectures; or to design AI-enhanced classroom discussions and assessment rubrics. Discipline-agnostic — applicable to any social science or humanities course.
+description: 用 AI 系统性地完成一门社科课程的备课——从课件盘点、逐页讲稿扩展、来源分级核查、参考资料库建设，到案例前置改造、交叉讲次一致性检查与 AI 增强课堂活动设计。This skill should be used when the user asks to prepare, expand, revise, or restructure lecture materials (pptx/pdf) for a university course; to build a lecture-notes document with per-page structure; to verify facts, names, citations, legal/statistical data or conflicting figures across a whole course and label source reliability tiers (T1—T4); to move cases from the end of a lecture to an opening discussion (case frontloading); to detect duplicated content or inconsistent requirements across lectures; or to design AI-enhanced classroom discussions and assessment rubrics. Discipline-agnostic — applicable to any social science or humanities course.
 ---
 
 # AI 增强社科课程备课
+
+**版本 3.0**。相对 2.x 的主要变化：新增来源分级（T1—T4）与冲突并列标注；新增 P2.5 案例前置改造阶段；交付物固定附「待核清单」；六个脚本全部重写为缓存复用、并发探测与单遍扫描，并新增 `source_audit.py`。
 
 ## 何时使用
 
 在以下情形使用本 skill：
 
 - 需要把一套课件（`.pptx`/`.pdf`）扩展为可讲授的讲稿与教案
-- 需要为课程材料补入历史脉络、理论关联与外部参考链接
-- 需要核查课件中的人名、文献卷期、法条条号、统计数据、案例事实
+- 需要为课程材料补入历史脉络、理论关联与外部参考链接，并标明每条来源的可信等级
+- 需要核查课件中的人名、文献卷期、法条条号、统计数据、案例事实，以及**不同来源之间的数字冲突**
+- 需要把案例从讲稿末尾移到开课讨论，用案例做理论的落点
 - 需要检查同一门课程内各讲之间是否存在内容重复或要求冲突
 - 需要设计 AI 增强的课堂讨论、作业规范与评分标准
 - 需要按学期推进、分批交付、每批完成后即可上课使用
@@ -27,6 +30,7 @@ description: 用 AI 系统性地完成一门社科课程的备课——从课件
 5. **AI 的首要角色是审计者，不是写作者。** 备课中 AI 的最大价值在于找出过时、错误、重复与遗漏；生成内容反而是次要功能。
 6. **链接必须检索获得。** 禁止凭记忆编造 URL、DOI、卷期或条号。检索不到即写「未检索到权威来源，建议课堂上不引用」。
 7. **显式交叉引用。** 每讲至少建立若干条指向其他讲次的引用（`回接 第 N 讲 第 x 页`），这是课程整体感的来源。
+8. **来源分级，冲突并列。** 每条外部依据标 T1—T4 等级；不同来源给出的数字或表述不一致时，**并列标注两说及各自等级，不自行取舍**。只有整理稿而无原始文本时，必须写明「媒体转述」，不得当作原话。
 
 ## 目录结构
 
@@ -34,18 +38,21 @@ description: 用 AI 系统性地完成一门社科课程的备课——从课件
 ai-enhanced-lecture-prep/
 ├── SKILL.md
 ├── references/
-│   ├── workflow-phases.md      # 八阶段详细流程与每阶段交付物
+│   ├── workflow-phases.md      # 八阶段 + P2.5 案例前置：动作、交付物、验收门槛
+│   ├── source-tiers.md         # 来源分级（T1—T4）、冲突并列标注、待核清单口径（新增）
 │   ├── ai-for-prep.md          # 教师侧：AI 增强备课的四个杠杆（重点）
 │   ├── ai-pedagogy.md          # 课堂侧：AI 增强教学活动与作业规范
 │   ├── qa-rubric.md            # 质检清单、验收门槛与失败模式
 │   └── prompt-library.md       # 备课与核查用提示词库
 ├── scripts/
+│   ├── _deck.py                # 共享解析层：缓存、格式兜底、抽取表格与组合形状
 │   ├── deck_index.py           # 导出课件页序索引与指定页全文
-│   ├── scaffold_lecture.py     # 按页序生成讲稿骨架
-│   ├── qa_lecture.py           # 覆盖度/重复/顺序/维度计数校验
-│   ├── extract_todo.py         # 抽取待核实条目，生成核查清单
-│   ├── check_links.py          # 批量校验参考链接存活性
-│   └── progress_report.py      # 生成全课程进度报告
+│   ├── scaffold_lecture.py     # 按页序生成讲稿骨架（--frontload 生成开课案例页）
+│   ├── qa_lecture.py           # 覆盖度/重复/顺序/维度/来源等级/待核清单校验
+│   ├── source_audit.py         # 来源分级审计（新增）
+│   ├── extract_todo.py         # 抽取待核实条目，生成表格式核查清单
+│   ├── check_links.py          # 并发 + 缓存的链接存活性校验
+│   └── progress_report.py      # 生成全课程进度报告与危险信号
 └── assets/
     ├── lecture-notes-template.md    # 讲稿文件模板（含文件头体例与文件尾附录）
     ├── reference-repo-template.md   # 参考资料总库模板（五分类）
@@ -59,13 +66,14 @@ ai-enhanced-lecture-prep/
 | P0 | 盘点与基线 | 导出页序、记录页数指纹、建立基线图 | `page_index.md` |
 | P1 | 骨架生成 | 按页序生成讲稿骨架 | `<课程>-第N讲-讲稿与教案.md` |
 | P2 | 逐页扩展 | 按维度补内容，核心条目补三子块 | 同上（填充后） |
-| P3 | 质检 | 覆盖度、重复、顺序、维度均衡 | 校验报告 |
-| P4 | 事实核查 | 逐条检索核实并回写 | 核查清单（清零） |
+| **P2.5** | **案例前置** | **把案例移到开课讨论，每理论讲完回答案例** | **开课案例页 + 回答案例条目** |
+| P3 | 质检 | 覆盖度、重复、顺序、维度、来源等级 | 校验报告 |
+| P4 | 事实核查 | 逐条检索核实、标等级、并列冲突、回写 | 核查清单（清零） |
 | P5 | 资料总库 | 按五类集中存放链接，随讲累积 | `<课程>参考资料总库.md` |
 | P6 | 交叉一致性 | 查重复、查冲突、查术语统一 | 一致性报告 |
 | P7 | 教学交付 | 讨论题、实证题目、AI 活动、评分标准 | 课堂可用材料 |
 
-详细步骤见 `references/workflow-phases.md`。
+详细步骤见 `references/workflow-phases.md`，来源口径见 `references/source-tiers.md`。
 
 ## 讲稿体例（必须沿用）
 
@@ -104,14 +112,31 @@ ai-enhanced-lecture-prep/
 【历史脉络】……（产生背景、演进阶段、当代发展）
 【逻辑关联】……（与本课程其他讲次的关系，写明「回接 第 N 讲 第 x 页」）
 【参考链接】
-- [数据库DOI] <URL>（访问日期）
-- [开放获取] <URL>（访问日期）
-- [官方一手] <URL>（访问日期）
-- [媒体报道] <URL>（访问日期）
-- [判例数据] <URL>（访问日期）
+- [官方一手][T1] <URL>（访问 2026-11-02）
+- [数据库DOI][T1] <URL>（访问 2026-11-02）
+- [媒体报道][T2] <URL>（访问 2026-11-02）
+- [开放获取][T2] <URL>（访问 2026-11-02）
+- [判例数据][T1] <URL>（访问 2026-11-02）
 ```
 
-链接分类标签固定为五个：`[数据库DOI]`、`[开放获取]`、`[官方一手]`、`[媒体报道]`、`[判例数据]`。脚本按此标签统计。
+链接写作 `- [类型][等级] <URL>（访问 YYYY-MM-DD）`。类型标签固定为五个：`[数据库DOI]`、`[开放获取]`、`[官方一手]`、`[媒体报道]`、`[判例数据]`；等级见下节。脚本按两套标签分别统计。
+
+## 来源分级（T1—T4）
+
+| 等级 | 内容 | 典型来源 |
+|---|---|---|
+| **T1** | 原始文本 / 官方一手 | 判决书、裁定书、法院与检察院通稿、法律法规原文、统计年鉴、机构官网公告、DOI 原文 |
+| **T2** | 权威署名报道 / 学术二手 | 通讯社与主流媒体署名报道、核心期刊论文、学术专著 |
+| **T3** | 整理稿 / 百科 / 转述 | 百科词条、门户转载、节目文字整理稿、他人转述的引语 |
+| **T4** | 不可考 | 佚名网帖、无出处的截图与「据说」、无法回溯的二手引用 |
+
+三条硬规则：
+
+1. **T1 优先。** 涉及金额、刑期、日期、案号、条号，先找文书或官方通稿；媒体转述只作线索。
+2. **冲突并列。** 不同来源数值不一致时，正文并列写出两说与各自等级，并注明「未取到文书原文」，不自行择一。
+3. **T3 不得冒充原话。** 只有节目整理稿、没有逐字实录时，写成「据某媒体转述，其表述为……」；引用当事人或专家言论必须回到原始文本。
+
+完整口径、判定流程与常见误标见 `references/source-tiers.md`。
 
 ## AI 增强备课的四个杠杆
 
@@ -120,7 +145,7 @@ ai-enhanced-lecture-prep/
 | 杠杆 | AI 的角色 | 典型动作 | 价值 |
 |---|---|---|---|
 | 一 | **审计者** | 时效审计、一致性审计、重复审计、盲点审计 | **最高** |
-| 二 | **检索者** | 补全文献出处、定位官方一手来源、找中英文媒体 | 高 |
+| 二 | **检索者** | 补全文献出处、定位官方一手来源、找中英文媒体、比对冲突数值 | 高 |
 | 三 | **结构化助手** | 把密集页面转成表格/板书/连续谱；为讨论题搭脚手架 | 中 |
 | 四 | **对抗性陪练** | 扮演挑剔学生挑刺；生成反事实提问；预判误解点 | 中高 |
 
@@ -130,47 +155,66 @@ ai-enhanced-lecture-prep/
 
 ## 脚本用法
 
-所有脚本接受 `--dir <课程目录>`（默认当前目录），输出 UTF-8。
+所有脚本接受 `--dir <课程目录>`（默认当前目录），输出 UTF-8，均支持 `--version`。退出码统一：`0` 通过 / `1` 存在待处理问题 / `2` 环境或参数错误。
 
 ```bash
-# P0 盘点：导出页序索引
-python scripts/deck_index.py <deck.pptx> --out page_index.md
+# P0 盘点：导出页序索引（首次解析后进缓存，后续调用直接命中）
+python scripts/deck_index.py <deck.pptx> --out page_index.md --json page_index.json
 
-# P0 盘点：查看指定页全文与备注
-python scripts/deck_index.py <deck.pptx> --pages 1,2,5
+# P0 盘点：查看指定页全文与备注（支持区间）
+python scripts/deck_index.py <deck.pptx> --pages 3-9
 
-# P1 骨架：按页序生成讲稿骨架
-python scripts/scaffold_lecture.py <deck.pptx> --out 讲稿.md
+# P1 骨架：按页序生成讲稿骨架；--frontload 生成开课案例页
+python scripts/scaffold_lecture.py <deck.pptx> --out 讲稿.md --frontload
 
-# P3 质检：覆盖度、重复、顺序、维度计数
-python scripts/qa_lecture.py 讲稿.md --deck <deck.pptx>
+# P3 质检：分批推进时加 --partial，严格模式加 --strict
+python scripts/qa_lecture.py 讲稿.md --deck <deck.pptx> --partial --strict --json qa.json
 
-# P4 核查：抽取待核实条目
+# P4 核查：抽取待核实条目（表格式清单，含结论列）
 python scripts/extract_todo.py --dir . --out verify_list.md
 
-# P5 总库：校验链接存活性
-python scripts/check_links.py --dir .
+# P4 核查：来源分级审计（等级与域名是否相符、链接是否漏标）
+python scripts/source_audit.py --dir . --strict
+
+# P5 总库：并发校验链接存活性（默认 8 线程，结果缓存 7 天）
+python scripts/check_links.py --dir . --jobs 8 --json link_report.json
 
 # P7 交付：全课程进度报告
-python scripts/progress_report.py --dir .
+python scripts/progress_report.py --dir . --json progress.json
 ```
 
-依赖：`python-pptx`（P0/P1/P3）、`python-docx`（仅在处理大纲时）。未安装时脚本应给出明确提示而非崩溃。
+依赖：`python-pptx`（P0/P1/P3）。未安装时脚本给出 `pip install` 提示并返回退出码 2，不会静默跳过。
+
+**格式兜底**：`.ppt`/`.doc` 等旧二进制格式无法解析，脚本会明确报错并提示另存为 `.pptx`/`.docx`，而不是返回 0 页让后续步骤在空基线上跑。
+
+### 性能设计（v3）
+
+| 机制 | 效果 |
+|---|---|
+| 解析缓存（`_deck.py`，键为路径+大小+mtime） | 同一课件只解析一次。实测 347 页课件：首次 1.34s → 命中 0.01s |
+| 链接并发探测 + 结果缓存 | 实测 109 条链接：串行 231.0s → 8 线程 38.3s → 缓存命中 0.0s |
+| 单遍扫描 | 质检与进度报告不再对全文反复正则，长讲稿线性耗时 |
+| 二分定位 | 待核条目的页号定位由逐条回溯改为一次预扫描 + bisect |
+| 跨文件 URL 去重 | 同一链接在多份文档中只探测一次 |
+
+缓存目录默认在系统临时目录下，可用环境变量 `AI_LECTURE_CACHE_DIR` 指定；`--no-cache` 可强制重算。
 
 ## 质检门槛
 
-每讲交付前必须全部通过（用 `qa_lecture.py` 自动校验，详见 `references/qa-rubric.md`）：
+每讲交付前必须全部通过（用 `qa_lecture.py` + `source_audit.py` 自动校验，详见 `references/qa-rubric.md`）：
 
 - 页序覆盖：无缺页、无重复、页号严格递增
 - 维度计数：六类维度均出现，且不严重失衡
 - 空白页：显式标注而非静默跳过
 - 待核实标记：数量归零或逐条给出结论
 - 交叉引用：每讲至少 3 条指向其他讲次
-- 链接：全部标注类型标签与访问日期，且通过存活性校验
+- 链接：全部标注类型标签、来源等级与访问日期，且通过存活性校验
+- 来源等级：无「百科标 T1/T2」「官方域名标 T3」的错标
+- 待核清单：交付物末尾存在「待核清单」章节，未取到的原始文本逐条列出
 
 ## 常见失败模式
 
-见 `references/qa-rubric.md`。最常见且代价最高的六种：
+见 `references/qa-rubric.md`。最常见且代价最高的七种：
 
 1. 一次性生成整册 → 缺页、重复、后半部分质量断崖
 2. 不标「需核实」→ 错误静默进入讲稿，课堂上被学生指出
@@ -178,12 +222,14 @@ python scripts/progress_report.py --dir .
 4. 未做跨讲一致性检查 → 同一门课出现三处互相冲突的作业要求
 5. 平行讲次内容重复却不分工 → 学生认为在浪费时间
 6. 只补内容不加交叉引用 → 课程碎片化，期末无法复习
+7. **把媒体整理稿当原话引用，或冲突数值只留一说** → 学生一查原始报道即失守
 
 ## 参考文件索引
 
 | 文件 | 何时读取 |
 |---|---|
 | `references/workflow-phases.md` | 开始任一阶段前，确认该阶段的动作与交付物 |
+| `references/source-tiers.md` | 需要判定来源等级、处理数值冲突、写待核清单时（新增，P4 必读） |
 | `references/ai-for-prep.md` | 需要设计 AI 参与的备课环节时（重点） |
 | `references/ai-pedagogy.md` | 设计课堂讨论、作业规范与评分标准时 |
 | `references/qa-rubric.md` | 每讲交付前做质检、或排查质量问题时 |
